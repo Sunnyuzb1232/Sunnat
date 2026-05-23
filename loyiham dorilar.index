@@ -1,0 +1,520 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class Medicine {
+  final String name;
+  final String category;
+  final double price;
+  final String description;
+
+  Medicine({
+    required this.name,
+    required this.category,
+    required this.price,
+    required this.description,
+  });
+}
+
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool darkMode = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Dorixona',
+      theme: darkMode ? ThemeData.dark() : ThemeData.light(),
+      home: HomePage(
+        darkMode: darkMode,
+        onThemeChanged: () {
+          setState(() {
+            darkMode = !darkMode;
+          });
+        },
+      ),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  final bool darkMode;
+  final VoidCallback onThemeChanged;
+
+  HomePage({
+    required this.darkMode,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Medicine> medicines = [
+    Medicine(
+      name: "Paracetamol",
+      category: "Og'riq",
+      price: 12000,
+      description: "Isitma va og'riq uchun.",
+    ),
+    Medicine(
+      name: "Analgin",
+      category: "Og'riq",
+      price: 15000,
+      description: "Kuchli og'riq qoldiruvchi.",
+    ),
+    Medicine(
+      name: "Vitamin C",
+      category: "Vitamin",
+      price: 18000,
+      description: "Immunitetni oshiradi.",
+    ),
+    Medicine(
+      name: "Aspirin",
+      category: "Yurak",
+      price: 21000,
+      description: "Qonni suyultiradi.",
+    ),
+    Medicine(
+      name: "Amoxicillin",
+      category: "Antibiotik",
+      price: 35000,
+      description: "Bakterial infeksiya uchun.",
+    ),
+  ];
+
+  List<Medicine> filteredMedicines = [];
+  List<Medicine> favorites = [];
+  List<Medicine> cart = [];
+
+  String selectedCategory = "Barchasi";
+
+  @override
+  void initState() {
+    super.initState();
+    filteredMedicines = medicines;
+  }
+
+  void searchMedicine(String query) {
+    final results = medicines.where((medicine) {
+      final nameLower = medicine.name.toLowerCase();
+      final searchLower = query.toLowerCase();
+
+      final matchesCategory =
+          selectedCategory == "Barchasi" ||
+              medicine.category == selectedCategory;
+
+      return nameLower.contains(searchLower) && matchesCategory;
+    }).toList();
+
+    setState(() {
+      filteredMedicines = results;
+    });
+  }
+
+  void filterCategory(String category) {
+    selectedCategory = category;
+
+    List<Medicine> results;
+
+    if (category == "Barchasi") {
+      results = medicines;
+    } else {
+      results = medicines
+          .where((medicine) => medicine.category == category)
+          .toList();
+    }
+
+    setState(() {
+      filteredMedicines = results;
+    });
+  }
+
+  void addToFavorites(Medicine medicine) {
+    setState(() {
+      if (!favorites.contains(medicine)) {
+        favorites.add(medicine);
+      }
+    });
+  }
+
+  void addToCart(Medicine medicine) {
+    setState(() {
+      cart.add(medicine);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("${medicine.name} savatchaga qo'shildi"),
+      ),
+    );
+  }
+
+  double getTotalPrice() {
+    double total = 0;
+
+    for (var item in cart) {
+      total += item.price;
+    }
+
+    return total;
+  }
+
+  Widget buildMedicineCard(Medicine medicine) {
+    return Card(
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.green,
+          child: Icon(Icons.medication, color: Colors.white),
+        ),
+        title: Text(
+          medicine.name,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(medicine.category),
+            SizedBox(height: 4),
+            Text("${medicine.price.toStringAsFixed(0)} so'm"),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'favorite') {
+              addToFavorites(medicine);
+            } else if (value == 'cart') {
+              addToCart(medicine);
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'favorite',
+              child: Text("Sevimli"),
+            ),
+            PopupMenuItem(
+              value: 'cart',
+              child: Text("Savatcha"),
+            ),
+          ],
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetailPage(
+                medicine: medicine,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget buildCategoryButton(String category) {
+    bool selected = selectedCategory == category;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+          selected ? Colors.green : Colors.grey.shade400,
+        ),
+        onPressed: () {
+          filterCategory(category);
+        },
+        child: Text(category),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Dorixona"),
+        actions: [
+          IconButton(
+            icon: Icon(
+              widget.darkMode
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+            ),
+            onPressed: widget.onThemeChanged,
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.shopping_cart),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CartPage(
+                        cart: cart,
+                        total: getTotalPrice(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (cart.isNotEmpty)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: CircleAvatar(
+                    radius: 8,
+                    backgroundColor: Colors.red,
+                    child: Text(
+                      cart.length.toString(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                hintText: "Dori qidirish...",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: searchMedicine,
+            ),
+            SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  buildCategoryButton("Barchasi"),
+                  buildCategoryButton("Og'riq"),
+                  buildCategoryButton("Vitamin"),
+                  buildCategoryButton("Antibiotik"),
+                  buildCategoryButton("Yurak"),
+                ],
+              ),
+            ),
+            SizedBox(height: 10),
+            Expanded(
+              child: filteredMedicines.isEmpty
+                  ? Center(
+                child: Text("Dori topilmadi"),
+              )
+                  : ListView.builder(
+                itemCount: filteredMedicines.length,
+                itemBuilder: (context, index) {
+                  return buildMedicineCard(
+                    filteredMedicines[index],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+              child: Center(
+                child: Text(
+                  "Dorixona Menyu",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.favorite),
+              title: Text("Sevimlilar"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FavoritesPage(
+                      favorites: favorites,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DetailPage extends StatelessWidget {
+  final Medicine medicine;
+
+  DetailPage({required this.medicine});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(medicine.name),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Icon(
+                Icons.medication,
+                size: 100,
+                color: Colors.green,
+              ),
+            ),
+            SizedBox(height: 20),
+            Text(
+              medicine.name,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "Kategoriya: ${medicine.category}",
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "Narxi: ${medicine.price} so'm",
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 20),
+            Text(
+              medicine.description,
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  final List<Medicine> favorites;
+
+  FavoritesPage({required this.favorites});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Sevimlilar"),
+      ),
+      body: favorites.isEmpty
+          ? Center(
+        child: Text("Sevimli dorilar yo'q"),
+      )
+          : ListView.builder(
+        itemCount: favorites.length,
+        itemBuilder: (context, index) {
+          final medicine = favorites[index];
+
+          return ListTile(
+            leading: Icon(Icons.favorite,
+                color: Colors.red),
+            title: Text(medicine.name),
+            subtitle:
+            Text("${medicine.price} so'm"),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CartPage extends StatelessWidget {
+  final List<Medicine> cart;
+  final double total;
+
+  CartPage({
+    required this.cart,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Savatcha"),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: cart.isEmpty
+                ? Center(
+              child: Text("Savatcha bo'sh"),
+            )
+                : ListView.builder(
+              itemCount: cart.length,
+              itemBuilder: (context, index) {
+                final item = cart[index];
+
+                return ListTile(
+                  leading: Icon(Icons.shopping_bag),
+                  title: Text(item.name),
+                  subtitle:
+                  Text("${item.price} so'm"),
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Text(
+                  "Jami: ${total.toStringAsFixed(0)} so'm",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Text("Buyurtma berish"),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
